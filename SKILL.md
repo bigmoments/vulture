@@ -99,6 +99,9 @@ dari entry point = kandidat PRUNE dengan confidence level. Cara verifikasi runti
 berkaitan, verifikasi ujung rantai** (data benar-benar sampai di cloud/storage
 tujuan), bukan cuma entry-nya terpanggil. Bila aplikasi offline-first, baca
 `references/offline-first.md` — audit kelengkapan rantai lokal → antrean → sync.
+Catatan: tentukan dulu apakah aplikasi online-first atau offline-first (bagian
+"Menentukan" di modul tersebut — deteksi sinyal, tanya user bila ambigu, catat
+asumsi di laporan); panduan UX offline berbeda untuk keduanya.
 
 **FASE 4 — Klasifikasi.** Aturan di `references/classification-report.md`:
 

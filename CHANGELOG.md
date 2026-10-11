@@ -10,6 +10,7 @@ All notable changes to this skill are documented here. Format follows [Keep a Ch
 - **Pola entry point offline-first** di `scripts/entry_points.py`: event `online`/`offline`, service worker `sync`, `sync.register(tag)` — agar fungsi sync tidak salah dikira mati.
 - **`references/offline-first.md`**: kebutuhan & optimasi fitur offline-first (rantai lokal → antrean outbox → sync → konfirmasi, tanpa kehilangan data, tersinkron cloud saat dibutuhkan) + 4 uji runtime wajib.
 - Verifikasi "ujung rantai" di `references/usefulness.md`: bukti entry terpanggil tidak cukup — buktikan data sampai di tujuan.
+- Mekanisme penentuan online-first vs offline-first di `references/offline-first.md`: deteksi sinyal kode → tanya user bila ambigu → catat asumsi di laporan.
 
 ### Changed
 - Renamed skill from `feature-audit` to `vulture` (persona-style name, ala `ponytail`): mode burung bangkai — melayang di atas codebase, mencium bangkai fungsi dari kejauhan, menukik tepat sasaran. Fungsionalitas tidak berubah.

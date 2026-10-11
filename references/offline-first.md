@@ -4,6 +4,23 @@
 > Tujuan: memastikan fitur **tetap bekerja, tidak kehilangan data, dan tetap
 > tersinkron dengan cloud saat dibutuhkan** — bukan sekadar "ada kode sync".
 
+## Menentukan: online-first vs offline-first?
+
+Skill tidak bisa tahu sendiri — ikuti aturan ini sebelum audit:
+
+1. **Deteksi sinyal** (grep cepat). Sinyal offline-first yang kuat:
+   - Service worker / PWA: `serviceWorker.register`, `workbox`, `sw.js`
+   - DB lokal: `indexedDB`, `Dexie`, `localForage`, `WatermelonDB`, `RxDB`,
+     `PouchDB`, `ElectricSQL`, `PowerSync`, SQLite (`expo-sqlite`, `Room`, Core Data)
+   - Event konektivitas: `addEventListener('online'/'offline')`, `NetInfo`, `navigator.onLine`
+   - Sync: `sync.register`, BackgroundFetch, tabel/koleksi `outbox`/`pending_sync`/`unsynced`
+2. **Bila ambigu → tanya user.** Satu pertanyaan eksplisit: "aplikasi ini online-first
+   atau offline-first?" Jangan menebak diam-diam — panduan UX offline beda total
+   untuk keduanya (lihat `ux.md` §3 di app-optimizer).
+3. **Catat asumsi di laporan.** Tulis di AUDIT.md: aplikasi dinilai sebagai
+   online-first/offline-first + dasarnya (sinyal kode / konfirmasi user). Bila
+   ternyata salah, seluruh temuan offline harus dibaca ulang.
+
 ## Rantai lengkap yang sehat
 
 ```
