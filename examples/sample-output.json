@@ -1,0 +1,54 @@
+{
+ "entries": [
+  {
+   "type": "http-route",
+   "name": "/users",
+   "handler": "listUsers",
+   "file": "app.js",
+   "line": 8,
+   "source": "heuristic"
+  },
+  {
+   "type": "http-route",
+   "name": "/users",
+   "handler": "createUser",
+   "file": "app.js",
+   "line": 9,
+   "source": "heuristic"
+  }
+ ],
+ "_note": "contoh 2 entri pertama dari 6",
+ "dead_candidates": [
+  {
+   "name": "oldReport",
+   "file": "app.js",
+   "line": 31,
+   "confidence": "high",
+   "reason": "tak ada pemanggil sama sekali",
+   "callers": []
+  },
+  {
+   "name": "formatLegacyRow",
+   "file": "app.js",
+   "line": 35,
+   "confidence": "medium",
+   "reason": "hanya dipanggil kode mati: oldReport",
+   "callers": [
+    "oldReport"
+   ]
+  }
+ ],
+ "stats": {
+  "total_functions": 20,
+  "reachable": 15,
+  "candidates": 5,
+  "roots": [
+   "createUser",
+   "index",
+   "listUsers",
+   "report",
+   "store",
+   "sync"
+  ]
+ }
+}

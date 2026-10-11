@@ -1,0 +1,21 @@
+# Dependencies / editor noise
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Env / secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
