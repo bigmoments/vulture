@@ -5,7 +5,7 @@ Usage:
     entry_points.py <dir> [-o entries.json]
 
 Output JSON: [{"type","name","handler","file","line","source"}, ...]
-  type: http-route | cli | cron | export | page
+  type: http-route | cli | cron | export | page | event | sync
   source: "heuristic" (pola) — entri manual ditambahkan terpisah.
 
 Ini heuristik pola, bukan parser. Yang tak terdeteksi (routing dinamis,
@@ -36,6 +36,20 @@ PATTERNS = [
     ("cron", {".js", ".ts", ".mjs", ".cjs"},
      r"(?:cron\s*\.\s*schedule|node-cron|schedule\s*\.\s*every)\s*\(",
      0, None, False),
+    # --- JS/TS: offline-first — event konektivitas ---
+    ("event", {".js", ".ts", ".mjs", ".cjs"},
+     r"(?:window|document|self)\s*\.\s*addEventListener\s*\(\s*['\"`](online|offline)['\"`]"
+     r"\s*(?:,\s*(?:async\s+)?(\w+))?", 1, 2, False),
+    ("event", {".js", ".ts", ".mjs", ".cjs", ".jsx", ".tsx"},
+     r"(?<![\w.])addEventListener\s*\(\s*['\"`](online|offline)['\"`]"
+     r"\s*(?:,\s*(?:async\s+)?(\w+))?", 1, 2, False),
+    # --- JS/TS: offline-first — service worker background sync ---
+    ("sync", {".js", ".ts", ".mjs", ".cjs"},
+     r"addEventListener\s*\(\s*['\"`]sync['\"`]"
+     r"\s*(?:,\s*(?:async\s+)?(\w+))?", 1, 2, False),
+    ("sync", {".js", ".ts", ".mjs", ".cjs"},
+     r"(?:registration\s*\.\s*)?sync\s*\.\s*register\s*\(\s*['\"`]([^'\"`]+)['\"`]",
+     1, None, False),
     # --- JS/TS: exported API ---
     ("export", {".js", ".ts", ".mjs", ".cjs"},
      r"export\s+(?:async\s+)?(?:function\s+(\w+)|const\s+(\w+)\s*=)", 1, None, False),

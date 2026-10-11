@@ -6,6 +6,10 @@ All notable changes to this skill are documented here. Format follows [Keep a Ch
 
 ### Added
 - "Cara pakai" / "Usage" section in `SKILL.md` and `README.md`: how to invoke via chat (primary) + manual script commands (optional).
+- **Temuan integrasi — rantai yang putus** (tujuan: semua fitur benar-benar berfungsi, terutama yang saling berkaitan): `scripts/unused_deps.py` (dependency dideklarasikan tapi tak diimpor, termasuk yang hanya dipakai kode mati), deteksi "rantai putus" di `audit_report.py --deps` (fungsi integrasi mati padahal SDK/config terpasang + sinyal env/config terkait), rekomendasi "sambungkan sampai ujung atau cabut total".
+- **Pola entry point offline-first** di `scripts/entry_points.py`: event `online`/`offline`, service worker `sync`, `sync.register(tag)` — agar fungsi sync tidak salah dikira mati.
+- **`references/offline-first.md`**: kebutuhan & optimasi fitur offline-first (rantai lokal → antrean outbox → sync → konfirmasi, tanpa kehilangan data, tersinkron cloud saat dibutuhkan) + 4 uji runtime wajib.
+- Verifikasi "ujung rantai" di `references/usefulness.md`: bukti entry terpanggil tidak cukup — buktikan data sampai di tujuan.
 
 ### Changed
 - Renamed skill from `feature-audit` to `vulture` (persona-style name, ala `ponytail`): mode burung bangkai — melayang di atas codebase, mencium bangkai fungsi dari kejauhan, menukik tepat sasaran. Fungsionalitas tidak berubah.

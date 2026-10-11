@@ -3,7 +3,7 @@
 
 Usage:
     audit_report.py --entries entries.json --graph graph.json --dead dead.json
-                    [--project NAME] -o AUDIT.md
+                    [--deps deps.json] [--project NAME] -o AUDIT.md
 
 Klasifikasi:
   KEEP   — terjangkau dari entry point.
@@ -17,7 +17,25 @@ manusia, bukan perintah hapus. (Prinsip kejujuran: SKILL.md)
 import argparse
 import datetime
 import json
+import os
+import re
 from collections import defaultdict
+
+# Heuristik nama fungsi yang biasanya ujung integrasi (pola, bukan vonis).
+# Selalu dilaporkan sebagai kandidat + sinyal pendukung, bukan fakta mati.
+INTEGRATION_HINTS = ("upload", "sync", "push", "pull", "send", "notify",
+                     "webhook", "publish", "subscribe", "payment", "charge",
+                     "export", "backup", "migrate", "queue", "enqueue",
+                     "dispatch", "deliver", "transmit", "replicate",
+                     "download", "share", "invite", "sms", "email", "mail",
+                     "invoice", "billing", "oauth", "sso")
+
+ENV_RX = re.compile(
+    r"process\.env\.([A-Z][A-Z0-9_]*)"
+    r"|os\.environ(?:\.get)?\(\s*['\"`]([^'\"`]+)['\"`]"
+    r"|getenv\(\s*['\"`]([^'\"`]+)['\"`]"
+    r"|\benv\(\s*['\"`]([^'\"`]+)['\"`]"
+)
 
 
 def load(p):
@@ -44,6 +62,8 @@ def main():
     ap.add_argument("--entries", required=True)
     ap.add_argument("--graph", required=True)
     ap.add_argument("--dead", required=True)
+    ap.add_argument("--deps", default=None,
+                    help="deps.json dari unused_deps.py (opsional)")
     ap.add_argument("--project", default="proyek")
     ap.add_argument("-o", "--output", required=True)
     args = ap.parse_args()
@@ -51,6 +71,7 @@ def main():
     entries = load(args.entries)
     graph = load(args.graph)
     dead = load(args.dead)
+    deps_data = load(args.deps) if args.deps else {"deps": []}
     today = datetime.date.today().isoformat()
 
     nodes = graph["nodes"]
@@ -97,6 +118,68 @@ def main():
         canon = ranked[0]["name"]
         members = ", ".join(f"{n['name']} ({n['file']}:{n['line']})" for n in g)
         merge_rows.append((members, canon))
+
+    # --- temuan integrasi: dependency & rantai putus ---
+    # Catatan: sinyal config/env dibaca dari file source, jadi paling akurat
+    # bila script dijalankan dari root proyek yang diaudit.
+    file_cache = {}
+
+    def file_text(rel):
+        if rel not in file_cache:
+            try:
+                with open(rel, encoding="utf-8", errors="replace") as f:
+                    file_cache[rel] = f.read()
+            except OSError:
+                file_cache[rel] = ""
+        return file_cache[rel]
+
+    def env_keys_in(text):
+        keys = set()
+        for m in ENV_RX.finditer(text):
+            for grp in m.groups():
+                if grp:
+                    keys.add(grp)
+        return sorted(keys)
+
+    keep_names = {n["name"] for n in keep}
+    file_status = {}  # rel -> live | dead | unknown
+    for n in nodes:
+        if n["name"] in keep_names:
+            file_status[n["file"]] = "live"
+        elif file_status.get(n["file"]) is None:
+            file_status[n["file"]] = "dead"
+
+    dep_importers = {d["name"]: d.get("imported_in", [])
+                     for d in deps_data["deps"]}
+    unused_deps = [d for d in deps_data["deps"] if not d["imported"]]
+    dead_only_deps = []
+    for d in deps_data["deps"]:
+        if not d["imported"]:
+            continue
+        files = d.get("imported_in", [])
+        # hanya flag bila SEMUA file pengimpor jelas mati;
+        # file tanpa fungsi terdeteksi (config) = unknown -> jangan flag
+        if files and all(file_status.get(f) == "dead" for f in files):
+            dead_only_deps.append(d)
+
+    broken = []  # (candidate, sinyal)
+    for c in prune_h + prune_m:
+        lname = c["name"].lower()
+        hint = next((h for h in INTEGRATION_HINTS if h in lname), None)
+        text = file_text(c["file"])
+        sdks = [dn for dn, fs in dep_importers.items() if c["file"] in fs]
+        keys = env_keys_in(text)
+        if hint or sdks:
+            signals = []
+            if hint:
+                signals.append(f"nama fungsi mengandung '{hint}'")
+            if sdks:
+                signals.append("memakai SDK: " + ", ".join(f"`{s}`" for s in sdks))
+            if keys:
+                shown = ", ".join(f"`{k}`" for k in keys[:8])
+                more = f" (+{len(keys)-8})" if len(keys) > 8 else ""
+                signals.append(f"config terkait: {shown}{more}")
+            broken.append((c, "; ".join(signals)))
 
     L = []
     A = L.append
@@ -176,18 +259,56 @@ def main():
     else:
         A("_Tidak ada._")
     A("")
+    A("## Temuan integrasi — rantai yang putus")
+    A("")
+    A("Fitur yang \"ada\" tapi tidak benar-benar berfungsi — terutama yang saling berkaitan.")
+    A("Aturan main: integrasi yang setengah terpasang lebih berbahaya daripada yang")
+    A("tak ada sama sekali. Putuskan per temuan: **sambungkan rantainya sampai ujung**")
+    A("(termasuk sync offline-first — lihat `references/offline-first.md`) atau")
+    A("**cabut total** (kode + dependency + config).")
+    A("")
+    A("### Dependency tak terpakai")
+    A("")
+    if unused_deps or dead_only_deps:
+        A("| Dependency | Manifest | Status |")
+        A("|---|---|---|")
+        for d in unused_deps:
+            A(f"| `{d['name']}` | `{d['manifest']}` | tak diimpor di mana pun |")
+        for d in dead_only_deps:
+            locs = ", ".join(f"`{f}`" for f in d["imported_in"][:3])
+            A(f"| `{d['name']}` | `{d['manifest']}` | hanya dipakai kode mati ({locs}) |")
+    else:
+        A("_Tidak ada._" if deps_data["deps"] else
+          "_Tidak dicek (jalankan `scripts/unused_deps.py` untuk mengisi bagian ini)._")
+    A("")
+    A("### Rantai putus — fungsi integrasi yang mati")
+    A("")
+    if broken:
+        A("| Fungsi | Lokasi | Sinyal integrasi | Artinya |")
+        A("|---|---|---|---|")
+        for c, signals in broken:
+            A(f"| `{c['name']}` | `{c['file']}:{c['line']}` | {signals} | "
+              f"rantai putus: integrasi terpasang tapi tak ada jalur hidup yang memakainya |")
+    else:
+        A("_Tidak ada._")
+    A("")
     A("## Rekomendasi prioritas")
     A("")
     A("1. **PRUNE high** — risiko terendah. Satu commit per fungsi (mudah revert).")
     A("2. **MERGE** — setelah PRUNE, saat peta sudah bersih. Baca kedua badan manual sebelum gabung.")
     A("3. **REVIEW** — putuskan satu per satu; lengkapi dengan cek runtime (log/analytics).")
-    A("4. **Ulangi** fase 2–3 setelah hapus/gabung — rantai mati baru sering muncul.")
+    A("4. **Temuan integrasi** — untuk tiap rantai putus: sambungkan sampai ujung atau cabut total.")
+    A("5. **Ulangi** fase 2–3 setelah hapus/gabung — rantai mati baru sering muncul.")
     A("")
     A("## Batasan audit")
     A("")
     A("- Deteksi via pola regex: routing dinamis, reflection, magic method, DI container tak terlihat.")
     A("- Pemanggilan lintas bahasa (frontend→API) dan lintas repo tak terdeteksi otomatis.")
     A("- Fungsi `export` yang tak terpanggil dianggap REVIEW, bukan PRUNE.")
+    A("- Nama fungsi integrasi ('upload', 'sync', ...) heuristik — bisa false positive, baca konteksnya.")
+    A("- Sinyal config/env pada temuan integrasi hanya muncul bila script dijalankan dari root proyek.")
+    A("- Kelengkapan rantai offline-first (lokal → antrean → sync) butuh verifikasi manual —")
+    A("  lihat `references/offline-first.md`.")
     A("- Cek runtime (log 7–30 hari, analytics) belum dilakukan — lakukan sebelum eksekusi PRUNE.")
 
     with open(args.output, "w") as f:

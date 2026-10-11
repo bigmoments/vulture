@@ -55,6 +55,20 @@ ditulis = ada penulis lain (job, trigger, aplikasi lain). Cek sebelum hapus.
 4. Tulis jawabannya di laporan per kandidat — "tidak ada pemanggil, 0 hit
    30 hari" jauh lebih meyakinkan daripada "kayaknya nggak dipakai".
 
+## Verifikasi rantai, bukan cuma fungsi
+
+Untuk fitur yang saling berkaitan (mis. simpan lokal → sync cloud), bukti bahwa
+*entry point* terpanggil **tidak cukup**. Yang harus dibuktikan: **ujung rantai
+benar-benar tereksekusi**.
+
+- Cek di sisi tujuan, bukan cuma sisi pengirim: file benar-benar ada di Cloudinary/
+  S3 (bukan cuma "request upload 200"), baris benar-benar masuk DB tujuan, notifikasi
+  benar-benar terkirim.
+- Untuk rantai offline-first: antrean outbox kosong setelah sync + data tampil di
+  cloud. Lihat `references/offline-first.md` untuk 4 uji runtime wajib.
+- Rantai yang "terlihat tersambung di graph" tapi ujungnya tak pernah terbukti di
+  runtime = **rantai putus yang tersamar** — laporkan sebagai temuan integrasi.
+
 ## Jebakan umum
 
 - **Kode musiman**: laporan tahunan, webhook langka — 0 hit 30 hari belum tentu mati.

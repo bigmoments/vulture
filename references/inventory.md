@@ -14,6 +14,8 @@
 | Cron/job | `cron.schedule(...)`, file crontab, queue worker | Fitur berjalan tanpa user |
 | CLI command | `program.command(...)`, `@click.command()`, `bin` di package.json | Fitur via terminal |
 | Exported API | `export function`, `module.exports`, `__all__` | Dipakai repo/paket lain |
+| Event konektivitas | `addEventListener('online'/'offline')` | Fitur yang jalan saat status jaringan berubah |
+| Background sync | service worker `sync` event, `sync.register('tag')` | Sync antrean offline-first |
 
 ## Pola per framework/bahasa (yang dikenali script)
 
@@ -22,6 +24,9 @@
 - Commander/yargs: `program.command('name')`, `yargs.command('name')`
 - Cron: `cron.schedule(...)`, `node-cron`, `setInterval` (catat manual — sering false positive)
 - Export: `export function name`, `export const name =`, `module.exports`
+- Offline-first: `addEventListener('online'|'offline', ...)`, service worker
+  `addEventListener('sync', ...)`, `sync.register('tag')` — rantai sync aplikasi
+  offline-first; kelengkapan rantainya diaudit via `references/offline-first.md`
 
 **Python** (`.py`):
 - Flask: `@app.route('/path')`, `@bp.route(...)`
@@ -61,5 +66,6 @@
 - Webhook endpoint (terdaftar di dashboard provider, bukan di kode).
 - Migration/seed script yang dijalankan sekali.
 - Event subscriber / message consumer (RabbitMQ, Kafka, Redis pub/sub).
+- Background sync yang diregistrasi via Workbox/nama tag dinamis.
 - Middleware yang juga berfungsi sebagai fitur (auth, logging boleh diabaikan).
 - File `index.*` / `main.*` sebagai entry implisit.

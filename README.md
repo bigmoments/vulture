@@ -27,11 +27,11 @@ Every long-lived codebase accumulates the same unknowns: *what features actually
 
 ## The 5-phase workflow
 
-1. **Inventory entry points** — HTTP routes, pages, UI actions, cron/jobs, CLI commands, exported APIs → `scripts/entry_points.py` → `entries.json`
+1. **Inventory entry points** — HTTP routes, pages, UI actions, cron/jobs, CLI commands, exported APIs, connectivity events (`online`/`offline`), background sync → `scripts/entry_points.py` → `entries.json`
 2. **Map relationships** — entry point → called functions → touched data (tables, external APIs, files) → `scripts/call_graph.py` → `graph.json`
-3. **Test usefulness** — three questions per function: *any callers? any runtime access? what breaks if deleted?* → `scripts/dead_code.py` → `dead.json` (candidates with confidence: high / medium / low)
+3. **Test usefulness** — three questions per function: *any callers? any runtime access? what breaks if deleted?* → `scripts/dead_code.py` → `dead.json` (candidates with confidence: high / medium / low); declared-but-never-imported dependencies → `scripts/unused_deps.py` → `deps.json`. For interrelated features, verify the **end of the chain** (data actually landed in the cloud), not just that the entry fired. Offline-first apps: see `references/offline-first.md`
 4. **Classify** — KEEP (live) / MERGE (duplicate) / PRUNE (dead) / REVIEW (ambiguous, needs a human)
-5. **Report** — one document: feature map, classification tables, priority order → `scripts/audit_report.py` → `AUDIT.md`
+5. **Report** — one document: feature map, classification tables, **integration findings (broken chains)**, priority order → `scripts/audit_report.py` → `AUDIT.md`
 
 ---
 
@@ -51,7 +51,8 @@ The agent runs the 5-phase workflow and delivers `AUDIT.md`: feature map, KEEP/M
 python3 scripts/entry_points.py <dir> -o entries.json
 python3 scripts/call_graph.py <dir> -o graph.json
 python3 scripts/dead_code.py --graph graph.json --entries entries.json -o dead.json
-python3 scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json -o AUDIT.md
+python3 scripts/unused_deps.py <dir> -o deps.json
+python3 scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json --deps deps.json -o AUDIT.md
 ```
 
 ---
@@ -62,8 +63,9 @@ python3 scripts/audit_report.py --entries entries.json --graph graph.json --dead
 |---|---|
 | `references/inventory.md` | Phase 1 — entry-point patterns per framework/language |
 | `references/relations.md` | Phase 2 — building the relationship map, heuristic limits |
-| `references/usefulness.md` | Phase 3 — the three usefulness questions, runtime checks (logs, analytics, grep) |
+| `references/usefulness.md` | Phase 3 — the three usefulness questions, chain-end verification, runtime checks (logs, analytics, grep) |
 | `references/classification-report.md` | Phases 4–5 — KEEP/MERGE/PRUNE/REVIEW criteria, report format, execution priority |
+| `references/offline-first.md` | Phase 3/5 — offline-first requirements: local-first chain, outbox, sync triggers, retry, conflict strategy, no-data-loss verification |
 
 The agent reads only the relevant modules — never everything at once.
 
@@ -75,16 +77,18 @@ Pure Python 3, **stdlib only**, executable directly:
 
 | Script | Input → Output |
 |---|---|
-| `scripts/entry_points.py <dir>` | source dir → `entries.json` (heuristic entry-point detection) |
+| `scripts/entry_points.py <dir>` | source dir → `entries.json` (heuristic entry-point detection, incl. `online`/`offline` events & background sync) |
 | `scripts/call_graph.py <dir>` | source dir → `graph.json` (nodes, edges, body hashes) |
 | `scripts/dead_code.py --graph g.json --entries e.json` | graph + entries → `dead.json` (PRUNE candidates + confidence) |
-| `scripts/audit_report.py --entries e.json --graph g.json --dead d.json -o AUDIT.md` | all findings → Markdown report |
+| `scripts/unused_deps.py <dir>` | source dir → `deps.json` (declared but never imported dependencies) |
+| `scripts/audit_report.py --entries e.json --graph g.json --dead d.json [--deps d.json] -o AUDIT.md` | all findings → Markdown report (incl. broken-chain integration findings) |
 
 ```bash
 scripts/entry_points.py ./src -o entries.json
 scripts/call_graph.py ./src -o graph.json
 scripts/dead_code.py --graph graph.json --entries entries.json -o dead.json
-scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json -o AUDIT.md
+scripts/unused_deps.py ./src -o deps.json
+scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json --deps deps.json -o AUDIT.md
 ```
 
 See `examples/sample-report.md` and `examples/sample-output.json` for the output shape.

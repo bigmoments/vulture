@@ -40,7 +40,8 @@ langsung tanpa asisten:
 python3 scripts/entry_points.py <dir> -o entries.json
 python3 scripts/call_graph.py <dir> -o graph.json
 python3 scripts/dead_code.py --graph graph.json --entries entries.json -o dead.json
-python3 scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json -o AUDIT.md
+python3 scripts/unused_deps.py <dir> -o deps.json
+python3 scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json --deps deps.json -o AUDIT.md
 ```
 
 ## Prinsip kejujuran (baca dulu)
@@ -73,6 +74,7 @@ analisa bug spesifik.
 FASE 1  inventarisasi entry point   → scripts/entry_points.py  → entries.json
 FASE 2  peta relasi                 → scripts/call_graph.py    → graph.json
 FASE 3  uji kegunaan                → scripts/dead_code.py     → dead.json
+                                        scripts/unused_deps.py → deps.json
 FASE 4  klasifikasi KEEP/MERGE/PRUNE/REVIEW
 FASE 5  laporan                     → scripts/audit_report.py  → AUDIT.md
 ```
@@ -89,10 +91,14 @@ dan data yang disentuh (tabel DB, API eksternal, file). Jalankan
 
 **FASE 3 — Uji kegunaan.** Tiap fungsi ditanya tiga hal: (1) ada yang manggil?
 (2) ada yang mengakses? (3) kalau dihapus, apa yang rusak? Jalankan
-`scripts/dead_code.py --graph graph.json --entries entries.json -o dead.json`.
-Fungsi tak terjangkau dari entry point = kandidat PRUNE dengan confidence
-level. Cara verifikasi runtime (log, analytics, grep) di
-`references/usefulness.md`.
+`scripts/dead_code.py --graph graph.json --entries entries.json -o dead.json`
+dan `scripts/unused_deps.py <dir> -o deps.json` (dependency yang dideklarasikan
+tapi tak diimpor — termasuk yang "hanya dipakai kode mati"). Fungsi tak terjangkau
+dari entry point = kandidat PRUNE dengan confidence level. Cara verifikasi runtime
+(log, analytics, grep) di `references/usefulness.md`. **Untuk fitur yang saling
+berkaitan, verifikasi ujung rantai** (data benar-benar sampai di cloud/storage
+tujuan), bukan cuma entry-nya terpanggil. Bila aplikasi offline-first, baca
+`references/offline-first.md` — audit kelengkapan rantai lokal → antrean → sync.
 
 **FASE 4 — Klasifikasi.** Aturan di `references/classification-report.md`:
 
@@ -103,9 +109,9 @@ level. Cara verifikasi runtime (log, analytics, grep) di
 | PRUNE | mati, aman dihapus | tak terjangkau + tak diekspor + confidence high/medium |
 | REVIEW | ambigu, butuh manusia | diekspor tapi tak terpanggil, pola dinamis, confidence low |
 
-**FASE 5 — Laporan.** `scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json -o AUDIT.md`.
-Satu dokumen: ringkasan angka, peta fitur, tabel klasifikasi, rekomendasi
-prioritas (PRUNE high dulu → MERGE → REVIEW).
+**FASE 5 — Laporan.** `scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json [--deps deps.json] -o AUDIT.md`.
+Satu dokumen: ringkasan angka, peta fitur, tabel klasifikasi, temuan integrasi
+(rantai putus), rekomendasi prioritas (PRUNE high dulu → MERGE → REVIEW).
 
 ## Output Contract
 
@@ -115,7 +121,9 @@ Laporan akhir (`AUDIT.md`) WAJIB memuat:
 2. **Peta fitur** — tiap entry point → fungsi yang terjangkau (rantai panggilan).
 3. **Tabel klasifikasi** — tiap kandidat PRUNE/MERGE/REVIEW: nama, file:baris, alasan, confidence.
 4. **Rekomendasi prioritas** — urutan eksekusi yang disarankan + apa yang perlu dikonfirmasi manusia.
-5. **Batasan** — apa yang TIDAK bisa dipastikan script (pola dinamis, pemakaian lintas repo).
+5. **Temuan integrasi** — dependency tak terpakai, dependency yang hanya dipakai kode mati,
+   dan rantai putus (fungsi integrasi mati padahal SDK/config terpasang + sinyal config terkait).
+6. **Batasan** — apa yang TIDAK bisa dipastikan script (pola dinamis, pemakaian lintas repo).
 
 ## Operating Rules
 
