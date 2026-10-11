@@ -18,7 +18,9 @@ version: 1.0.0
 
 Audit fitur aplikasi: jawab tiga pertanyaan — **fungsi apa saja yang ada,
 saling berhubungan bagaimana, dan mana yang benar-benar berguna.** Berhenti di
-laporan + rekomendasi; eksekusi hapus/gabung selalu keputusan manusia.
+laporan + rekomendasi + **usulan perbaikan**; setiap eksekusi (hapus/gabung/
+sambung) selalu keputusan manusia — fase perbaikan hanya jalan bila diminta
+eksplisit.
 
 ## Cara pakai
 
@@ -28,10 +30,17 @@ tidak perlu menjalankan script manual. Contoh:
 - "vulture, audit codebase di ~/proyek-X"
 - "cek dead code di repo ini"
 - "fitur apa aja sih di aplikasi ini?"
+- "vulture, perbaiki rantai yang putus di repo ini" → fase 6 (perbaikan)
 
 Asisten menjalankan workflow 5 fase di bawah dan menyerahkan laporan `AUDIT.md`:
 peta fitur, tabel klasifikasi KEEP/MERGE/PRUNE/REVIEW, dan rekomendasi prioritas.
 Keputusan hapus/gabung tetap di tangan manusia.
+
+**Mode interaktif.** `python3 scripts/interactive.py <dir>` — wizard yang
+menjalankan fase 1–3 otomatis lalu menuntun Anda per temuan: hapus PRUNE dengan
+konfirmasi (ada backup), catat keputusan MERGE/REVIEW, dan antrekan wiring
+rantai putus untuk agent. Penyambungan rantai tetap dikerjakan agent di chat
+(fase 6) karena butuh penilaian kode.
 
 **Manual (opsional).** Script di `scripts/` Python stdlib murni, bisa dijalankan
 langsung tanpa asisten:
@@ -77,6 +86,7 @@ FASE 3  uji kegunaan                → scripts/dead_code.py     → dead.json
                                         scripts/unused_deps.py → deps.json
 FASE 4  klasifikasi KEEP/MERGE/PRUNE/REVIEW
 FASE 5  laporan                     → scripts/audit_report.py  → AUDIT.md
+FASE 6  perbaikan (opsional, hanya bila diminta eksplisit) → fixing.md
 ```
 
 **FASE 1 — Inventarisasi entry point.** Entry point = pintu masuk eksekusi:
@@ -114,7 +124,26 @@ asumsi di laporan); panduan UX offline berbeda untuk keduanya.
 
 **FASE 5 — Laporan.** `scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json [--deps deps.json] -o AUDIT.md`.
 Satu dokumen: ringkasan angka, peta fitur, tabel klasifikasi, temuan integrasi
-(rantai putus), rekomendasi prioritas (PRUNE high dulu → MERGE → REVIEW).
+(rantai putus), usulan perbaikan (draf — butuh persetujuan), rekomendasi prioritas
+(PRUNE high dulu → MERGE → REVIEW).
+
+**FASE 6 — Perbaikan (opsional).** Hanya jalan bila user eksplisit meminta
+("perbaiki", "fix", "sambungkan"). Bukan sekadar hapus/gabung: bila fungsi yang
+seharusnya berkaitan ternyata tidak terhubung (rantai putus), agent menyambungkannya
+agar benar-benar bekerja — caranya di `references/fixing.md`. Aturannya keras:
+usulan diff disetujui manusia satu per satu, jangan mengarang logika bisnis,
+dan setiap perbaikan **wajib** diverifikasi via re-audit fase 2–3 (PRUNE → KEEP)
++ uji runtime. Tanpa permintaan eksplisit, vulture berhenti di fase 5.
+
+**Mode interaktif (alternatif fase 6 untuk eksekusi mekanis).**
+`scripts/interactive.py <dir>` — wizard CLI: menjalankan fase 1–3 otomatis,
+lalu menuntun user per temuan satu per satu. PRUNE: preview → konfirmasi →
+hapus (potongan di-backup ke `vulture-removed.bak.md`). MERGE/REVIEW/dep:
+keputusan dicatat ke `vulture-decisions.json`. Rantai putus: pilih "sambungkan"
+(masuk antrean agent → `FIX-QUEUE.md`, karena wiring butuh penilaian kode —
+tidak dikerjakan script) atau "cabut". Setelah penghapusan, re-audit otomatis
+untuk konfirmasi. Batasan jujur: script tidak menulis wiring; itu tugas agent
+di chat (fase 6 di atas).
 
 ## Output Contract
 
@@ -126,7 +155,9 @@ Laporan akhir (`AUDIT.md`) WAJIB memuat:
 4. **Rekomendasi prioritas** — urutan eksekusi yang disarankan + apa yang perlu dikonfirmasi manusia.
 5. **Temuan integrasi** — dependency tak terpakai, dependency yang hanya dipakai kode mati,
    dan rantai putus (fungsi integrasi mati padahal SDK/config terpasang + sinyal config terkait).
-6. **Batasan** — apa yang TIDAK bisa dipastikan script (pola dinamis, pemakaian lintas repo).
+6. **Usulan perbaikan** — draf pilihan per rantai putus (sambungkan / cabut total);
+   eksekusi hanya setelah persetujuan manusia (fase 6).
+7. **Batasan** — apa yang TIDAK bisa dipastikan script (pola dinamis, pemakaian lintas repo).
 
 ## Operating Rules
 

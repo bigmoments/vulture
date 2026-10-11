@@ -31,7 +31,8 @@ Every long-lived codebase accumulates the same unknowns: *what features actually
 2. **Map relationships** — entry point → called functions → touched data (tables, external APIs, files) → `scripts/call_graph.py` → `graph.json`
 3. **Test usefulness** — three questions per function: *any callers? any runtime access? what breaks if deleted?* → `scripts/dead_code.py` → `dead.json` (candidates with confidence: high / medium / low); declared-but-never-imported dependencies → `scripts/unused_deps.py` → `deps.json`. For interrelated features, verify the **end of the chain** (data actually landed in the cloud), not just that the entry fired. Offline-first apps: see `references/offline-first.md`
 4. **Classify** — KEEP (live) / MERGE (duplicate) / PRUNE (dead) / REVIEW (ambiguous, needs a human)
-5. **Report** — one document: feature map, classification tables, **integration findings (broken chains)**, priority order → `scripts/audit_report.py` → `AUDIT.md`
+5. **Report** — one document: feature map, classification tables, **integration findings (broken chains)**, draft fix proposals, priority order → `scripts/audit_report.py` → `AUDIT.md`
+6. **Fix (optional)** — only on explicit request ("fix", "perbaiki", "sambungkan"): wire broken chains so related features actually work, guided by `references/fixing.md`. Every diff needs human approval; every fix is verified by re-running phases 2–3 (PRUNE → KEEP) plus runtime tests
 
 ---
 
@@ -55,6 +56,8 @@ python3 scripts/unused_deps.py <dir> -o deps.json
 python3 scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json --deps deps.json -o AUDIT.md
 ```
 
+**Interactive (optional).** `python3 scripts/interactive.py <dir>` — wizard that runs phases 1–3 automatically, then walks you through each finding: delete PRUNE candidates with confirmation (backed up), record MERGE/REVIEW decisions, and queue broken-chain wiring for the agent (`FIX-QUEUE.md`). Wiring itself stays with the agent in chat (phase 6) since it needs code judgment.
+
 ---
 
 ## Modules
@@ -66,6 +69,7 @@ python3 scripts/audit_report.py --entries entries.json --graph graph.json --dead
 | `references/usefulness.md` | Phase 3 — the three usefulness questions, chain-end verification, runtime checks (logs, analytics, grep) |
 | `references/classification-report.md` | Phases 4–5 — KEEP/MERGE/PRUNE/REVIEW criteria, report format, execution priority |
 | `references/offline-first.md` | Phase 3/5 — offline-first requirements: local-first chain, outbox, sync triggers, retry, conflict strategy, no-data-loss verification |
+| `references/fixing.md` | Phase 6 (optional, explicit request only) — fix principles, relatedness signals, wiring vs prune/merge execution, approval workflow, mandatory verification |
 
 The agent reads only the relevant modules — never everything at once.
 
@@ -82,6 +86,7 @@ Pure Python 3, **stdlib only**, executable directly:
 | `scripts/dead_code.py --graph g.json --entries e.json` | graph + entries → `dead.json` (PRUNE candidates + confidence) |
 | `scripts/unused_deps.py <dir>` | source dir → `deps.json` (declared but never imported dependencies) |
 | `scripts/audit_report.py --entries e.json --graph g.json --dead d.json [--deps d.json] -o AUDIT.md` | all findings → Markdown report (incl. broken-chain integration findings) |
+| `scripts/interactive.py <dir>` | interactive wizard: auto phases 1–3, per-finding triage (delete PRUNE with confirmation + backup, record MERGE/REVIEW decisions, queue wiring for agent → `FIX-QUEUE.md`), auto re-audit |
 
 ```bash
 scripts/entry_points.py ./src -o entries.json
@@ -111,6 +116,8 @@ Pure Markdown + Python scripts, standard `SKILL.md` format. No hooks, plugins, M
 ## Honesty contract
 
 This skill will not tell you a function is dead — it tells you it's a *candidate*, with a confidence level and a reason, plus everything it could not verify. The REVIEW category exists because real codebases have dynamic routing, reflection, cross-repo usage, and seasonal jobs. A report with zero REVIEW items on a large codebase should make you suspicious, not happy.
+
+The same honesty extends to fixing (phase 6, explicit request only): proposals are drafts, every diff needs human approval one by one, and "fixed" means verified — re-audit shows PRUNE → KEEP plus a runtime test proving the chain's end actually fired.
 
 ---
 

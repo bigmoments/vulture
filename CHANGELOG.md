@@ -11,6 +11,8 @@ All notable changes to this skill are documented here. Format follows [Keep a Ch
 - **`references/offline-first.md`**: kebutuhan & optimasi fitur offline-first (rantai lokal → antrean outbox → sync → konfirmasi, tanpa kehilangan data, tersinkron cloud saat dibutuhkan) + 4 uji runtime wajib.
 - Verifikasi "ujung rantai" di `references/usefulness.md`: bukti entry terpanggil tidak cukup — buktikan data sampai di tujuan.
 - Mekanisme penentuan online-first vs offline-first di `references/offline-first.md`: deteksi sinyal kode → tanya user bila ambigu → catat asumsi di laporan.
+- **FASE 6 — Perbaikan** (hanya bila diminta eksplisit): `references/fixing.md` baru (prinsip usulan≠vonis, sinyal "seharusnya berkaitan", wiring vs eksekusi PRUNE/MERGE, persetujuan per diff, verifikasi wajib re-audit + uji runtime); section "Usulan perbaikan" di `audit_report.py` (Pilihan A sambungkan / Pilihan B cabut total per rantai putus).
+- **`scripts/interactive.py`** (wizard interaktif): fase 1–3 otomatis → triase per temuan (PRUNE: preview + konfirmasi + backup `vulture-removed.bak.md`; MERGE/REVIEW/dep: keputusan di `vulture-decisions.json`; rantai putus: "sambungkan" → antrean agent `FIX-QUEUE.md`, karena wiring butuh penilaian kode) → re-audit otomatis. Terverifikasi 3 skenario di fixture.
 
 ### Changed
 - Renamed skill from `feature-audit` to `vulture` (persona-style name, ala `ponytail`): mode burung bangkai — melayang di atas codebase, mencium bangkai fungsi dari kejauhan, menukik tepat sasaran. Fungsionalitas tidak berubah.
