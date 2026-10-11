@@ -4,6 +4,9 @@ All notable changes to this skill are documented here. Format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Added
+- "Cara pakai" / "Usage" section in `SKILL.md` and `README.md`: how to invoke via chat (primary) + manual script commands (optional).
+
 ### Changed
 - Renamed skill from `feature-audit` to `vulture` (persona-style name, ala `ponytail`): mode burung bangkai — melayang di atas codebase, mencium bangkai fungsi dari kejauhan, menukik tepat sasaran. Fungsionalitas tidak berubah.
 

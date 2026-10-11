@@ -35,6 +35,27 @@ Every long-lived codebase accumulates the same unknowns: *what features actually
 
 ---
 
+## Usage
+
+**Via chat (primary).** This is an agent skill — invoke it by asking your assistant. Examples:
+
+- "vulture, audit the codebase at ~/my-project"
+- "check for dead code in this repo"
+- "what features exist in this app?"
+
+The agent runs the 5-phase workflow and delivers `AUDIT.md`: feature map, KEEP/MERGE/PRUNE/REVIEW classification tables, and prioritized recommendations. Deletion/merging decisions stay with the human.
+
+**Manual (optional).** The scripts are pure Python 3 stdlib and can be run directly, no assistant needed:
+
+```bash
+python3 scripts/entry_points.py <dir> -o entries.json
+python3 scripts/call_graph.py <dir> -o graph.json
+python3 scripts/dead_code.py --graph graph.json --entries entries.json -o dead.json
+python3 scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json -o AUDIT.md
+```
+
+---
+
 ## Modules
 
 | Module | When the agent reads it |

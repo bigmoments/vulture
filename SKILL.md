@@ -20,6 +20,29 @@ Audit fitur aplikasi: jawab tiga pertanyaan — **fungsi apa saja yang ada,
 saling berhubungan bagaimana, dan mana yang benar-benar berguna.** Berhenti di
 laporan + rekomendasi; eksekusi hapus/gabung selalu keputusan manusia.
 
+## Cara pakai
+
+**Lewat chat (cara utama).** Skill ini dipakai dengan cara meminta ke asisten —
+tidak perlu menjalankan script manual. Contoh:
+
+- "vulture, audit codebase di ~/proyek-X"
+- "cek dead code di repo ini"
+- "fitur apa aja sih di aplikasi ini?"
+
+Asisten menjalankan workflow 5 fase di bawah dan menyerahkan laporan `AUDIT.md`:
+peta fitur, tabel klasifikasi KEEP/MERGE/PRUNE/REVIEW, dan rekomendasi prioritas.
+Keputusan hapus/gabung tetap di tangan manusia.
+
+**Manual (opsional).** Script di `scripts/` Python stdlib murni, bisa dijalankan
+langsung tanpa asisten:
+
+```
+python3 scripts/entry_points.py <dir> -o entries.json
+python3 scripts/call_graph.py <dir> -o graph.json
+python3 scripts/dead_code.py --graph graph.json --entries entries.json -o dead.json
+python3 scripts/audit_report.py --entries entries.json --graph graph.json --dead dead.json -o AUDIT.md
+```
+
 ## Prinsip kejujuran (baca dulu)
 
 Script di skill ini **heuristik** (pola regex, bukan compiler). Mereka menemukan
